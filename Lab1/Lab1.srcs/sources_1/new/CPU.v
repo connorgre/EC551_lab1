@@ -31,6 +31,12 @@
 // _ex = execute (alu stage)
 // _me = memory
 // _wb = writeback
+//
+// These ~could~ each be put into their own module, however I don't think that is totally
+// necessary, as each stage should really just be passing stuff into submodules and 
+// passing into registers. Part of the reason this would be difficult is multiple 
+// stages need to access memory (Fetch and Memory), and multiple need the register file
+// (Decode and WriteBack).  Additionally, it would make finding hazards more difficult
 module CPU(out, clk, fullReset, resetPC, loadInstr, instr);
     parameter bitLen = 16;
     parameter regBits = 3;
@@ -41,6 +47,7 @@ module CPU(out, clk, fullReset, resetPC, loadInstr, instr);
 ///////////////////////////////////////////////////////////////////////
 ////////////////        -- INSTRUCTION FETCH --        ////////////////
 ///////////////////////////////////////////////////////////////////////
+    // the PC is NOT stored in the register file.  It is its OWN register
     wire [bitLen-1:0] pc_if;
     wire [bitLen-1:0] firstPC;
     wire [bitLen-1:0] currPc;
@@ -83,7 +90,7 @@ module CPU(out, clk, fullReset, resetPC, loadInstr, instr);
                                           .clk(clk));
     // moves the next PC into the current PC on the clock edge
     NBitReg #(.N(bitLen)) regPC_ID_ID    (.inData(nextPC),
-                                          .outData(pc_if),
+                                          .outData(pc_id),
                                           .enable(1'b1),
                                           .clk(clk));
 ///////////////////////////////////////////////////////////////////////
@@ -91,12 +98,13 @@ module CPU(out, clk, fullReset, resetPC, loadInstr, instr);
 ///////////////////////////////////////////////////////////////////////
 
     wire [3:0] opCode;
-    wire [regBits-1:0] arg1_id;
-    wire [regBits-1:0] arg2_id;
+    wire [5:0] arg1;
+    wire [5:0] arg2;
+
     InstrDecode decoder(.instr(currInstr),
                         .opCode(opCode),
-                        .arg1(arg1_id),
-                        .arg2(arg2_id));
+                        .arg1(arg1),
+                        .arg2(arg2));
     
     wire [bitLen-1:0]   regWriteData,
                         regData1,
@@ -105,7 +113,9 @@ module CPU(out, clk, fullReset, resetPC, loadInstr, instr);
     wire [regBits-1:0]  writeReg,
                         readReg1,
                         readReg2;
-
+                        
+    assign readReg1 = arg1[2:0];
+    assign readReg2 = arg2[2:0];
     RegisterFile regFile (.clk(clk),
                           .reset(fullReset),
                           .writeData(regWriteData),
@@ -115,7 +125,8 @@ module CPU(out, clk, fullReset, resetPC, loadInstr, instr);
                           .readReg2(readReg2),
                           .readData1(regData1),
                           .readData2(regData2));
-
+    wire [11:0] jumpTarget;
+    assign jumpTarget[11:0] = {arg1, arg2};
 ///////////////////////////////////////////////////////////////////////
 ////////////////           -- EXECUTION --            /////////////////
 ///////////////////////////////////////////////////////////////////////

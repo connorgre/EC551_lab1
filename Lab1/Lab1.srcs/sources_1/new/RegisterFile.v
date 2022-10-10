@@ -19,7 +19,8 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-
+// R6 is the program counter, and is NOT stored in the register file, it is
+// much simpler implementation-wise to have the PC be its own independent register
 module RegisterFile(clk, reset, writeData, writeReg, regWrite, readReg1, readReg2, 
                     readData1, readData2);
    parameter bitLen = 16; // bitlength of registers
@@ -45,7 +46,7 @@ module RegisterFile(clk, reset, writeData, writeReg, regWrite, readReg1, readReg
         if (readReg2 == writeReg)
           readData2 = writeData;
    end
-   
+      
    always @(posedge clk)
    begin
         if (reset) 

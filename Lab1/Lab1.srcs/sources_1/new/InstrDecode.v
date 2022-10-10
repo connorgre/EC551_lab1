@@ -23,10 +23,10 @@
 module InstrDecode(
     input [15:0] instr,
     output [3:0] opCode,
-    output [3:0] arg1,
-    output [3:0] arg2
+    output [5:0] arg1,
+    output [5:0] arg2
     );
     assign opCode = instr[15:12];
-    assign arg1   = instr[8:6];
-    assign arg2   = instr[2:0];
+    assign arg1   = instr[11:6];
+    assign arg2   = instr[5:0];
 endmodule
