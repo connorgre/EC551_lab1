@@ -1,0 +1,5 @@
+*.log
+*.jou
+*.str
+Lab1/.Xil/*
+Lab1/Lab1.cache/*
