@@ -1,38 +1,30 @@
+
+`include "opCodes.vh"
 module ALU(
-    input [15:0] regdata1,
-    input [15:0] AluMuxOut,
-    input [3:0] opcode,
+    input [15:0] aluIn1,
+    input [15:0] aluIn2,
+    input [2:0] aluOp,
     output reg [15:0] ALUresult
     );
     always @(*)
     begin
-        case(opcode)
-            //4'b0000: // HALT;
-            //4'b0010: // JMP;
-            //4'b0011: // JNE;
-            //4'b0100: // JE;
-            //4'b1000: // CMP;
-            //4'b1001: //MOV Rn, num;
-            //4'b1010: // MOV Rn, Rm;
-            //4'b1011: // MOV [Rn], Rm;
-            //4'b1100: // MOV Rn, [Rm];
-            //4'b1101: // SP1;
-            //4'b1110: // SP2;
-            //4'b1111: // SP3;
-            
-            4'b0001: // INC
-                ALUresult <= regdata1 + 1;
-            
-            4'b0101: // ADD
-                ALUresult <= regdata1 + AluMuxOut;
-                
-            4'b0110: // SUB
-                ALUresult <= regdata1 - AluMuxOut;
-                
-            4'b0111: // XOR
-                ALUresult <= regdata1 ^ AluMuxOut;
-            default:
-                ALUresult <= regdata1 + AluMuxOut;
-        endcase    
+        case(aluOp)           
+            `incAlu:        // inc
+                ALUresult <= aluIn1 + 1;
+            `addAlu:        // add
+                ALUresult <= aluIn1 + aluIn2;
+            `subAlu:        // sub
+                ALUresult <= aluIn1 - aluIn2;
+            `xorAlu:        // xor
+                ALUresult <= aluIn1 ^ aluIn2;
+            `movAlu:        // mov  (out = in2)
+                ALUresult <= aluIn2;
+            `passAlu:       // pass (out = in1)
+                ALUresult <= aluIn1;
+            default: begin  // defualt to pass
+                $display("undefined alu op");
+                ALUresult <= aluIn1;
+            end
+        endcase
     end
 endmodule

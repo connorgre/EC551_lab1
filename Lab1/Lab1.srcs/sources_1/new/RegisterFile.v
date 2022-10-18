@@ -41,9 +41,9 @@ module RegisterFile(clk, reset, writeData, writeReg, regWrite, readReg1, readReg
         readData1 = Reg_File[readReg1];
         readData2 = Reg_File[readReg2];
         //Register File Write Through
-        if (readReg1 == writeReg)
+        if ((readReg1 == writeReg) && (regWrite == 1'b1))
           readData1 = writeData;
-        if (readReg2 == writeReg)
+        if ((readReg2 == writeReg) && (regWrite == 1'b1))
           readData2 = writeData;
    end
       

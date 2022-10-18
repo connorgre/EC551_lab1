@@ -34,7 +34,7 @@ module Memory(clk, write, address, dataIn, dataOut, pcIn, instrOut, reset);
    
     reg [bitLen-1:0]mem_array [0:2**memBits];
    
-    always @(posedge clk)
+    always @(*)
       begin
          if (reset)
             for(i = 0; i < 2**memBits; i=i+1)
