@@ -36,7 +36,7 @@ module RegisterFile(clk, reset, writeData, writeReg, regWrite, readReg1, readReg
    integer       i;
    reg [bitLen-1:0]    Reg_File[(2**regBits)-1:0]; //2**regBits registers of bitLen length
    
-   always @(readReg1 or readReg2 or writeReg or writeData)
+   always @(*) // <- always want to be reading from the register file
    begin
         readData1 = Reg_File[readReg1];
         readData2 = Reg_File[readReg2];

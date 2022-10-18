@@ -49,3 +49,7 @@
 `define r4 6'b000100
 `define r5 6'b000101
 
+//convenient place to define the forwarding signals
+`define noFw 2'b00
+`define fwME 2'b01
+`define fwWB 2'b10

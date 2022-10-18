@@ -22,6 +22,7 @@
 
 module control(
     input  [3:0]    opCode,
+    input           forceZero,
     output reg      regWrite,
     output reg      readMem,
     output reg      writeMem,
@@ -34,7 +35,7 @@ module control(
     // decode the aluOp in here to simplify the logic in the top module
     aluOpDecode aluDecode(.opCode(opCode), .aluOp(aluOp));
     
-    always@(opCode)
+    always@(opCode, forceZero)
     begin
         // init all to 0, selectively set
         regWrite = 1'b0;
@@ -43,31 +44,41 @@ module control(
         aluImm   = 1'b0;
         jump     = 1'b0;
         halt     = 1'b0;
-        case(opCode)
-            `haltOp:
-                halt     = 1'b1;
-            `jmpOp,
-            `jneOp,
-            `jeOp:
-                jump     = 1'b1;
-            `incOp,
-            `addOp,
-            `subOp,
-            `xorOp,
-            `movOp:
-                regWrite = 1'b1;
-            `cmpOp:
-                cmpWrite = 1'b1;
-            `movIOp: begin
-                regWrite = 1'b1;
-                aluImm   = 1'b1;
+        if (forceZero == 1'b0) begin
+            case(opCode)
+                `haltOp:
+                    halt     = 1'b1;
+                `jmpOp,
+                `jneOp,
+                `jeOp:
+                    jump     = 1'b1;
+                `incOp,
+                `addOp,
+                `subOp,
+                `xorOp,
+                `movOp:
+                    regWrite = 1'b1;
+                `cmpOp:
+                    cmpWrite = 1'b1;
+                `movIOp: begin
+                    regWrite = 1'b1;
+                    aluImm   = 1'b1;
+                    end
+                `storeOp:
+                    writeMem = 1'b1;
+                `loadOp: begin
+                    readMem  = 1'b1;
+                    regWrite = 1'b1;
+                    end
+                default: begin  // not really necessary, but putting it in bc ur supposed to have default case
+                    regWrite = 1'b0;
+                    readMem  = 1'b0;
+                    writeMem = 1'b0;
+                    aluImm   = 1'b0;
+                    jump     = 1'b0;
+                    halt     = 1'b0;
                 end
-            `storeOp:
-                writeMem = 1'b1;
-            `loadOp: begin
-                readMem  = 1'b1;
-                regWrite = 1'b1;
-                end
-          endcase
+              endcase
+          end
     end
 endmodule

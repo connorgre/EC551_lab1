@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module ALU_Mux(
     input  [15:0] regData2,
     input  [5:0] arg2,

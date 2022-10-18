@@ -72,40 +72,40 @@ module cpu_tb();
         arg1 = `r2;
         arg2 = 6'd20;
         `cycleClk;
-        
+        /*
         `nop;
         `cycleClk;
         `nop;
         `cycleClk;
         `nop;
         `cycleClk;
-        
+        */
         //r3=r1 (10)
         op   = `movOp;
         arg1 = `r3;
         arg2 = `r1;
         `cycleClk;
-        
+        /*
         `nop;
         `cycleClk;
         `nop;
         `cycleClk;
         `nop;
         `cycleClk;
-        
+        */
         //r3=r3+r2 (10+20=30)
         op   = `addOp;
         arg1 = `r3;
         arg2 = `r2;
         `cycleClk;
-        
+        /*
         `nop;
         `cycleClk;
         `nop;
         `cycleClk;
         `nop;
         `cycleClk;
-        
+        */
         resetPc = 1'b1;
         loadInstr = 1'b0;
         #1;

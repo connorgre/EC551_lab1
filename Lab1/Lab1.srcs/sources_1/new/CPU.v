@@ -42,6 +42,20 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
     input clk, fullReset, loadInstr, resetPc;
     input  [15:0] instr;
     output [15:0] out;
+// forward declarations         <- should eventually move all the register wires here
+    wire [2:0] readReg1_ME;
+    wire [2:0] readReg2_ME;
+    wire [2:0] writeReg_ME;
+    wire writeMem_ME;
+    wire [15:0] memAddress_ME;
+    wire [15:0] memDataOut_ME;
+    wire [15:0] memDataIn_ME;
+    wire [2:0]  writeReg_WB;
+    wire regWrite_WB;
+    wire regWrite_ME;
+    wire [15:0]   aluOut_ME;
+    wire [15:0] outData_WB;
+
 
 ///////////////////////////////////////////////////////////////////////
 ////////////////        -- INSTRUCTION FETCH --        ////////////////
@@ -72,12 +86,6 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
     // reset resets all memory to 0
     // pcIn is the current program counter
     // instrOut is the instruction read from memory\
-
-    // forward declarations
-    wire writeMem_ME;
-    wire [15:0] memAddress_ME;
-    wire [15:0] memDataOut_ME;
-    wire [15:0] memDataIn_ME;
     
     wire writeToMem       = (fullReset == 1'b1) ? 1'b0 : (loadInstr | writeMem_ME);
     wire [15:0] memAddrIn = (loadInstr == 1'b1) ? currPc : memAddress_ME;    // <- write to mem when loading instructions
@@ -126,7 +134,7 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
                         .arg1(arg1),
                         .arg2(arg2));
     
-    wire [15:0]   regData1_ID,
+    wire [15:0]         regData1_ID,
                         regData2_ID;
 
     wire [regBits-1:0]  writeReg_ID,
@@ -139,10 +147,7 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
     assign readReg1_ID = arg1[2:0];
     assign writeReg_ID = arg1[2:0];
     assign readReg2_ID = arg2[2:0];
-    wire regWrite_WB;
     wire writeToRegFile = ((fullReset == 1'b1) || (loadInstr == 1'b1)) ? 1'b0 : regWrite_WB;
-    wire [15:0] outData_WB;
-    wire [2:0]  writeReg_WB;
     RegisterFile regFile (.clk(clk),
                           .reset(fullReset),
                           .writeData(outData_WB),
@@ -163,7 +168,9 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
     wire        halt_ID;
     wire        cmpWrite_ID;                    // <- need to handle cmp logic in ID
     wire [2:0]  aluOp_ID;
+    wire        forceCtrlZero = (loadInstr || fullReset);
     control control_i ( .opCode(opCode),
+                        .forceZero(forceCtrlZero),
                         .regWrite(regWrite_ID),
                         .readMem(readMem_ID),
                         .writeMem(writeMem_ID),
@@ -247,20 +254,41 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
     wire halt_EX     = ctrlBus_EX[0];
     wire [15:0]         aluIn1,
                         aluIn2;
-    assign aluIn1 = regData1_EX;
-    ALU_Mux aluMux (.regData2(regData2_EX), 
-                    .arg2(imm_EX), 
-                    .ALUSrc(~aluImm_EX), 
-                    .ALU_Mux_out(aluIn2));
 
     // since pass and mov are alu ops, no need to mux the aluOut with anything
+    wire [1:0]  fwReg1, fwReg2;
+    ForwardingUnit fwUnit ( .reg1_EX(readReg1_EX), 
+                            .reg2_EX(readReg2_EX), 
+                            .wbReg_ME(writeReg_ME), 
+                            .wbReg_WB(writeReg_WB), 
+                            .write_ME(regWrite_ME), 
+                            .write_WB(regWrite_WB), 
+                            .fwReg1(fwReg1), 
+                            .fwReg2(fwReg2));
+    wire [15:0] fwResult1, fwResult2;
+    ForwardMux fwMux1 ( .out(fwResult1),
+                        .data_EX(regData1_EX),
+                        .data_ME(aluOut_ME),
+                        .data_WB(outData_WB),
+                        .select(fwReg1));
+    ForwardMux fwMux2 ( .out(fwResult2),
+                        .data_EX(regData2_EX),
+                        .data_ME(aluOut_ME),
+                        .data_WB(outData_WB),
+                        .select(fwReg2));
+
+    assign aluIn1 = fwResult1;
+    ALU_Mux aluMuxIn2 ( .regData2(fwResult2), 
+                        .arg2(imm_EX), 
+                        .ALUSrc(~aluImm_EX), 
+                        .ALU_Mux_out(aluIn2));
+
     wire [15:0]   aluOut_EX;
     ALU alu (   .aluIn1(aluIn1), 
                 .aluIn2(aluIn2), 
                 .aluOp(aluOp_EX), 
                 .ALUresult(aluOut_EX));
     
-    wire [15:0]   aluOut_ME;
     wire [15:0]   regData2_ME;
     NBitReg #(.N(16)) aluOut_EXME ( .inData(aluOut_EX),
                                     .outData(aluOut_ME),
@@ -278,9 +306,7 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
                                     .enable(1'b1),          // <- Need to fix
                                     .clk(clk),
                                     .reset(fullReset));
-    wire [2:0] readReg1_ME;
-    wire [2:0] readReg2_ME;
-    wire [2:0] writeReg_ME;
+    
     NBitReg #(.N(3)) read1Reg_EXME (.inData(readReg1_EX),
                                     .outData(readReg1_ME),
                                     .enable(1'b1),          // <- Need to fix
@@ -317,6 +343,7 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
 */
     //ctrlBus_ID[5:0] = {regWrite_ID, readMem_ID, writeMem_ID, 
     //                       aluImm_ID, jump_ID, halt_ID};
+    assign regWrite_ME = ctrlBus_ME[5];
     wire readMem_ME    = ctrlBus_ME[4];
     assign writeMem_ME = ctrlBus_ME[3];
     wire halt_ME       = ctrlBus_ME[0];
@@ -365,5 +392,5 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
     // this is declared in ID stage, bc register file is instantiated there
     assign regWrite_WB = ctrlBus_WB[5];
     wire halt_WB       = ctrlBus_WB[0];
-    assign out = outData_WB;
+    assign out = (regWrite_WB) ? outData_WB : -1;
 endmodule
