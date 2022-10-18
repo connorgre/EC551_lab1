@@ -20,17 +20,16 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 // only writes inData to outData on posedge clk if enable is high
-module NBitReg(inData, outData, enable, clk);
+module NBitReg(inData, outData, enable, clk, reset);
     parameter N = 16;
     input [N-1:0] inData;
-    input enable, clk;
+    input enable, clk, reset;
     output reg [N-1:0] outData;
     
-    always @(posedge clk)
-      begin
-        if (enable == 1'b1)
-          begin
-            outData = inData;
-          end
-      end
+    always @(posedge clk, posedge reset)
+        if (reset)
+            outData <= 0;
+        else 
+            if (enable)
+                outData[N-1:0] <= inData[N-1:0];
 endmodule

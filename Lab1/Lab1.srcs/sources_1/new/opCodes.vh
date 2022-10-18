@@ -40,3 +40,12 @@
 `define xorAlu  3'b100
 `define passAlu 3'b101  // aluOut = Rn
 
+// convenient place to define register values to make generating
+// instructions easier.
+`define r0 6'b000000
+`define r1 6'b000001
+`define r2 6'b000010
+`define r3 6'b000011
+`define r4 6'b000100
+`define r5 6'b000101
+

@@ -21,10 +21,10 @@
 
 
 module Mux2to1(out, in1, in2, select);
-    parameter bitLen = 16;
-    input  [bitLen-1:0] in1, in2;
+    parameter N = 16;
+    input       [N-1:0] in1, in2;
     input               select;
-    output [bitLen-1:0] out;
+    output      [N-1:0] out;
     
     assign out = select ? in1 : in2;
 endmodule
