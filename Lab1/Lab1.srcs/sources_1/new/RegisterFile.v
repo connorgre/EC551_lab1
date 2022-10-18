@@ -34,7 +34,7 @@ module RegisterFile(clk, reset, writeData, writeReg, regWrite, readReg1, readReg
    input               regWrite, clk;
    
    integer       i;
-   reg [regBits-1:0]    Reg_File[bitLen-1:0]; //2**regBits registers of bitLen length
+   reg [bitLen-1:0]    Reg_File[(2**regBits)-1:0]; //2**regBits registers of bitLen length
    
    always @(readReg1 or readReg2 or writeReg or writeData)
    begin

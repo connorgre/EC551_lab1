@@ -19,7 +19,8 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 `include "opCodes.vh"
-
+`define cycleClk #1 clk = ~clk; #1 clk = ~clk
+`define nop op = `haltOp; arg1 = `r0; arg2 = `r0
 module cpu_tb();
 
     wire [15:0] out;
@@ -49,99 +50,68 @@ module cpu_tb();
         resetPc     = 1'b1;
         loadInstr   = 1'b1;
         {op, arg1, arg2} = 16'h0000;
-        // pulse the reset
+        // pulse the reset, with a clock in between
         #1 fullReset = 1'b1;
+        `cycleClk;
         #1 fullReset = 1'b0;
         // allow the Pc to increment on clocks
+        `cycleClk;
         #1 resetPc = 1'b0;
         
         // right now, memory and registers all == 0.
         // loadInstr == 1, fullReset == 0, resetPc == 0, clk == 0.
         // now to start running the clock loading instructions in.
+        // r1=10
         op   = `movIOp;
         arg1 = `r1;
         arg2 = 6'd10;
-        #5 clk = ~clk;
-        #5 clk = ~clk;
+        `cycleClk;
         
+        //r2=20
         op   = `movIOp;
         arg1 = `r2;
         arg2 = 6'd20;
-        #5 clk = ~clk;
-        #5 clk = ~clk;
+        `cycleClk;
         
-        op   = `haltOp;
-        arg1 = `r0;
-        arg2 = `r0;
-        #5 clk = ~clk;
-        #5 clk = ~clk;
+        `nop;
+        `cycleClk;
+        `nop;
+        `cycleClk;
+        `nop;
+        `cycleClk;
         
-        op   = `haltOp;
-        arg1 = `r0;
-        arg2 = `r0;
-        #5 clk = ~clk;
-        #5 clk = ~clk;
-        
+        //r3=r1 (10)
         op   = `movOp;
         arg1 = `r3;
         arg2 = `r1;
-        #5 clk = ~clk;
-        #5 clk = ~clk;
+        `cycleClk;
         
-        op   = `haltOp;
-        arg1 = `r0;
-        arg2 = `r0;
-        #5 clk = ~clk;
-        #5 clk = ~clk;
+        `nop;
+        `cycleClk;
+        `nop;
+        `cycleClk;
+        `nop;
+        `cycleClk;
         
-        op   = `haltOp;
-        arg1 = `r0;
-        arg2 = `r0;
-        #5 clk = ~clk;
-        #5 clk = ~clk;
-        
-        op   = `haltOp;
-        arg1 = `r0;
-        arg2 = `r0;
-        #5 clk = ~clk;
-        #5 clk = ~clk;
-        
+        //r3=r3+r2 (10+20=30)
         op   = `addOp;
         arg1 = `r3;
         arg2 = `r2;
-        #5 clk = ~clk;
-        #5 clk = ~clk;
+        `cycleClk;
         
-        op   = `haltOp;
-        arg1 = `r0;
-        arg2 = `r0;
-        #5 clk = ~clk;
-        #5 clk = ~clk;
-        
-        op   = `haltOp;
-        arg1 = `r0;
-        arg2 = `r0;
-        #5 clk = ~clk;
-        #5 clk = ~clk;
-        
-        op   = `haltOp;
-        arg1 = `r0;
-        arg2 = `r0;
-        #5 clk = ~clk;
-        #5 clk = ~clk;
-        
-        op   = `haltOp;
-        arg1 = `r0;
-        arg2 = `r0;
-        #5 clk = ~clk;
-        #5 clk = ~clk;
+        `nop;
+        `cycleClk;
+        `nop;
+        `cycleClk;
+        `nop;
+        `cycleClk;
         
         resetPc = 1'b1;
         loadInstr = 1'b0;
-        #5 clk = ~clk;
+        #1;
         resetPc = 1'b0;
         // now the program should start running
-        #100;
+        #200;
         $finish;
     end
 

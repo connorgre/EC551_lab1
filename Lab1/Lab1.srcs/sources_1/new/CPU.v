@@ -79,12 +79,13 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
     wire [15:0] memDataOut_ME;
     wire [15:0] memDataIn_ME;
     
-    wire forceNoWrite = ((fullReset == 1'b1) || (loadInstr == 1'b1));
-    wire writeToMem   = (forceNoWrite == 1'b1) ? 1'b0 : writeMem_ME;
+    wire writeToMem       = (fullReset == 1'b1) ? 1'b0 : (loadInstr | writeMem_ME);
+    wire [15:0] memAddrIn = (loadInstr == 1'b1) ? currPc : memAddress_ME;    // <- write to mem when loading instructions
+    wire [15:0] memDataIn = (loadInstr == 1'b1) ? instr : memDataIn_ME;
     Memory mem (.clk(clk),
                 .write(writeToMem),
-                .address(memAddress_ME),
-                .dataIn(memDataIn_ME),
+                .address(memAddrIn),
+                .dataIn(memDataIn),
                 .dataOut(memDataOut_ME),
                 .reset(fullReset),
                 .pcIn(currPc),
@@ -136,10 +137,12 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
                         readReg2_EX;
                         
     assign readReg1_ID = arg1[2:0];
+    assign writeReg_ID = arg1[2:0];
     assign readReg2_ID = arg2[2:0];
     wire regWrite_WB;
-    wire [5:0] writeReg_WB;
-    wire writeToRegFile = (forceNoWrite == 1'b1) ? 1'b0 : regWrite_WB;
+    wire writeToRegFile = ((fullReset == 1'b1) || (loadInstr == 1'b1)) ? 1'b0 : regWrite_WB;
+    wire [15:0] outData_WB;
+    wire [2:0]  writeReg_WB;
     RegisterFile regFile (.clk(clk),
                           .reset(fullReset),
                           .writeData(outData_WB),
@@ -187,23 +190,23 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
                                     .enable(1'b1),          // <- need to fix
                                     .clk(clk),
                                     .reset(fullReset));
-    NBitReg #(.N(6)) read1Reg_IDEX  (.inData(readReg1_ID),
+    NBitReg #(.N(3)) read1Reg_IDEX  (.inData(readReg1_ID),
                                     .outData(readReg1_EX),
                                     .enable(1'b1),          // <- need to fix
                                     .clk(clk),
                                     .reset(fullReset));
-    NBitReg #(.N(6)) read2Reg_IDEX  (.inData(readReg2_ID),
+    NBitReg #(.N(3)) read2Reg_IDEX  (.inData(readReg2_ID),
                                     .outData(readReg2_EX),
                                     .enable(1'b1),          // <- need to fix
                                     .clk(clk),
                                     .reset(fullReset));
-    NBitReg #(.N(6)) writeReg_IDEX  (.inData(writeReg_ID),
+    NBitReg #(.N(3)) writeReg_IDEX  (.inData(writeReg_ID),
                                     .outData(writeReg_EX),
                                     .enable(1'b1),          // <- need to fix
                                     .clk(clk),
                                     .reset(fullReset));
 
-    NBitReg #(.N(7)) ctrlReg_IDEX ( .inData(ctrlBus_ID),
+    NBitReg #(.N(6)) ctrlReg_IDEX ( .inData(ctrlBus_ID),
                                     .outData(ctrlBus_EX),
                                     .enable(1'b1),          // <- need to fix
                                     .clk(clk),
@@ -211,6 +214,12 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
     wire [2:0]  aluOp_EX;
     NBitReg #(.N(3)) aluOpReg_IDEX (.inData(aluOp_ID),
                                     .outData(aluOp_EX),
+                                    .enable(1'b1),          // <- need to fix
+                                    .clk(clk),
+                                    .reset(fullReset));
+    wire [5:0] imm_EX;
+    NBitReg #(.N(6)) immReg_IDEX  ( .inData(arg2),
+                                    .outData(imm_EX),
                                     .enable(1'b1),          // <- need to fix
                                     .clk(clk),
                                     .reset(fullReset));
@@ -226,6 +235,7 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
             regData2_EX, 
             writeReg_EX, 
             aluOp_EX,
+            imm_EX
    OUTPUT:  aluOut_ME,
             regData2_ME,
             ctrlBus_ME,
@@ -235,11 +245,11 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
 */
     wire aluImm_EX   = ctrlBus_EX[2];
     wire halt_EX     = ctrlBus_EX[0];
-    wire [15:0]   aluIn1,
+    wire [15:0]         aluIn1,
                         aluIn2;
     assign aluIn1 = regData1_EX;
     ALU_Mux aluMux (.regData2(regData2_EX), 
-                    .arg2(readReg2_EX), 
+                    .arg2(imm_EX), 
                     .ALUSrc(~aluImm_EX), 
                     .ALU_Mux_out(aluIn2));
 
@@ -268,20 +278,20 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
                                     .enable(1'b1),          // <- Need to fix
                                     .clk(clk),
                                     .reset(fullReset));
-    wire [5:0] readReg1_ME;
-    wire [5:0] readReg2_ME;
-    wire [5:0] writeReg_ME;
-    NBitReg #(.N(6)) read1Reg_EXME (.inData(readReg1_EX),
+    wire [2:0] readReg1_ME;
+    wire [2:0] readReg2_ME;
+    wire [2:0] writeReg_ME;
+    NBitReg #(.N(3)) read1Reg_EXME (.inData(readReg1_EX),
                                     .outData(readReg1_ME),
                                     .enable(1'b1),          // <- Need to fix
                                     .clk(clk),
                                     .reset(fullReset));
-    NBitReg #(.N(6)) read2Reg_EXME (.inData(readReg2_EX),
+    NBitReg #(.N(3)) read2Reg_EXME (.inData(readReg2_EX),
                                     .outData(readReg2_ME),
                                     .enable(1'b1),          // <- Need to fix
                                     .clk(clk),
                                     .reset(fullReset));
-    NBitReg #(.N(6)) writeReg_EXME (.inData(writeReg_EX),
+    NBitReg #(.N(3)) writeReg_EXME (.inData(writeReg_EX),
                                     .outData(writeReg_ME),
                                     .enable(1'b1),          // <- Need to fix
                                     .clk(clk),
@@ -307,9 +317,9 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
 */
     //ctrlBus_ID[5:0] = {regWrite_ID, readMem_ID, writeMem_ID, 
     //                       aluImm_ID, jump_ID, halt_ID};
-    wire readMem_ME  = ctrlBus_ME[4];
+    wire readMem_ME    = ctrlBus_ME[4];
     assign writeMem_ME = ctrlBus_ME[3];
-    wire halt_ME     = ctrlBus_ME[0];
+    wire halt_ME       = ctrlBus_ME[0];
     
     // THE MEMORY UNIT IS INSTANTIATED IN INSTRUCTION FETCH STAGE
     // memAddress_ME, memDataIn_ME, writeMem_ME, and readMem_ME are
@@ -335,7 +345,7 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
                                     .enable(1'b1),              // <- Need to fix
                                     .clk(clk),
                                     .reset(fullReset));
-    NBitReg #(.N(6)) writeReg_MEWB (.inData(writeReg_ME),
+    NBitReg #(.N(3)) writeReg_MEWB (.inData(writeReg_ME),
                                     .outData(writeReg_WB),
                                     .enable(1'b1),              // <- Need to fix
                                     .clk(clk),
