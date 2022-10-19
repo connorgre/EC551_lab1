@@ -29,6 +29,8 @@
 //          Realistically, the memory could be made asynchronos (or just negedge of clk)
 //          to fix this as well, but I know this works and don't wanna deal with other
 //          issues that could bring up.
+//
+//      >   Doing a cmp, we need to stall long enough for 
 module StallController(readMem_EX, readReg_EX, useReg2_ID, reg1_ID, reg2_ID, stall);
     input           readMem_EX,
                     useReg2_ID;

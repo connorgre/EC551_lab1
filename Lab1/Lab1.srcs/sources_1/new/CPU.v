@@ -58,6 +58,9 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
     wire        readMem_EX;
                   
     wire        loadStall;
+    wire        doJump_ID;
+    wire [11:0] jumpTarget;
+    wire        cmpRes_EX;
 
 
 ///////////////////////////////////////////////////////////////////////
@@ -67,39 +70,30 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
     // to change this we'd need to add an extra input/output to register file
     wire [15:0] pc_IF;
     wire [15:0] firstPc;
-    wire [15:0] currPc;
     wire [15:0] nextPc;
     wire [15:0] instr_IF;
     
     // The simulator requires that the code be loaded into location 31 (decimal).
     // this muxes the pc_if (from nextPc -> reg -> pc_if), with this initial value
     assign firstPc = 16'd31;
-    Mux2to1 #(.N(16)) PCMux(.out(currPc),  // <- need to expand this to handle jump target
-                            .in1(firstPc),
-                            .in2(pc_IF),
-                            .select(resetPc));
-    IncrementPC pcInc (.pcIn(currPc), .pcOut(nextPc));
-    // not the best solution, but this ensures that the PC actually does get reset properly without
-    // worrying about weird clock edges messing stuff up
-    wire [15:0] nextPcToReg;
-    Mux2to1 #(.N(16)) PCtoRegMux (  .out(nextPcToReg),
-                                    .in1(firstPc),
-                                    .in2(nextPc),
-                                    .select(resetPc));
+    wire [15:0] currPc = (resetPc == 1'b1) ? firstPc : pc_IF;
+    wire [15:0] memPcIn = ((doJump_ID == 1'b1) && (loadInstr == 1'b0)) ? {4'b0000, jumpTarget} : currPc;
+    IncrementPC pcInc (.pcIn(memPcIn), .pcOut(nextPc));
+    
     // reset resets all memory to 0
     // pcIn is the current program counter
-    // instrOut is the instruction read from memory\
-    
+    // instrOut is the instruction read from memory
     wire writeToMem       = (fullReset == 1'b1) ? 1'b0 : (loadInstr | writeMem_ME);
     wire [15:0] memAddrIn = (loadInstr == 1'b1) ? currPc : memAddress_ME;    // <- write to mem when loading instructions
     wire [15:0] memDataIn = (loadInstr == 1'b1) ? instr : memDataIn_ME;
+    
     Memory mem (.clk(clk),
                 .write(writeToMem),
                 .address(memAddrIn),
                 .dataIn(memDataIn),
                 .dataOut(memDataOut_ME),
                 .reset(fullReset),
-                .pcIn(currPc),
+                .pcIn(memPcIn),
                 .instrOut(instr_IF));
 
     // passes current instruction into decode
@@ -109,8 +103,11 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
                                           .enable(~loadStall),
                                           .clk(clk),
                                           .reset(fullReset));
+
     // moves the next PC into the current PC on the clock edge
-    
+    // not the best solution, but this ensures that the PC actually does get reset properly without
+    // worrying about weird clock edges messing stuff up
+    wire [15:0] nextPcToReg = (resetPc == 1'b1) ? firstPc : nextPc;
     NBitReg #(.N(16)) regPC_ID_ID    (.inData(nextPcToReg),
                                       .outData(pc_IF),
                                       .enable(~loadStall),
@@ -160,18 +157,22 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
                           .readReg2(readReg2_ID),
                           .readData1(regData1_ID),
                           .readData2(regData2_ID));
-    wire [11:0] jumpTarget;
+    
+    // see comment in module if je and jne have hazards with a cmp instruction
+    // right before them.  This ~shouldn't~ be an issue but could be.
+    JumpController jumpCtrl (   .opCode(opCode),
+                                .cmpResult(cmpRes_EX),
+                                .reset(fullReset | loadInstr),
+                                .doJump(doJump_ID));
     assign jumpTarget[11:0] = {arg1, arg2};
-    
-    
     
     wire        regWrite_ID;
     wire        readMem_ID;
     wire        writeMem_ID;
     wire        aluImm_ID;
-    wire        jump_ID;
+    wire        jump_ID;            // <- unused. don't feel like fixing yet.
     wire        halt_ID;
-    wire        cmpWrite_ID;                    // <- need to handle cmp logic in ID
+    wire        cmpWrite_ID;
     wire [2:0]  aluOp_ID;
     wire        forceCtrlZero = (loadInstr || fullReset);
     control control_i ( .opCode(opCode),
@@ -196,7 +197,7 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
     wire [5:0] ctrlBus_ID;
     wire [5:0] ctrlBus_EX;
     assign ctrlBus[5:0] = {regWrite_ID, readMem_ID, writeMem_ID, 
-                           aluImm_ID, jump_ID, halt_ID};
+                           aluImm_ID, cmpWrite_ID, halt_ID};
     assign ctrlBus_ID[5:0] = (loadStall == 1'b1) ? 6'b000000 : ctrlBus;
     wire [15:0] regData1_EX;
     wire [15:0] regData2_EX;
@@ -263,8 +264,9 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
             writeReg_ME
 */
     assign readMem_EX = ctrlBus_EX[4];
-    wire aluImm_EX   = ctrlBus_EX[2];
-    wire halt_EX     = ctrlBus_EX[0];
+    wire aluImm_EX    = ctrlBus_EX[2];
+    wire cmpWrite_EX  = ctrlBus_EX[1];
+    wire halt_EX      = ctrlBus_EX[0];
     wire [15:0]         aluIn1,
                         aluIn2;
 
@@ -297,10 +299,17 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
                         .ALU_Mux_out(aluIn2));
 
     wire [15:0]   aluOut_EX;
+    wire          aluCmpRes;
     ALU alu (   .aluIn1(aluIn1), 
                 .aluIn2(aluIn2), 
                 .aluOp(aluOp_EX), 
-                .ALUresult(aluOut_EX));
+                .ALUresult(aluOut_EX),
+                .cmpRes(aluCmpRes));
+    
+    CompareHandle cmpCtrl ( .cmpInstr(cmpWrite_EX), 
+                            .aluEqRes(aluCmpRes),
+                            .reset(fullReset), 
+                            .cmpResult(cmpRes_EX));
     
     wire [15:0]   regData2_ME;
     NBitReg #(.N(16)) aluOut_EXME ( .inData(aluOut_EX),
@@ -354,8 +363,7 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
             ctrlBus_WB,
             writeReg_WB
 */
-    //ctrlBus_ID[5:0] = {regWrite_ID, readMem_ID, writeMem_ID, 
-    //                       aluImm_ID, jump_ID, halt_ID};
+
     assign regWrite_ME = ctrlBus_ME[5];
     wire readMem_ME    = ctrlBus_ME[4];
     assign writeMem_ME = ctrlBus_ME[3];

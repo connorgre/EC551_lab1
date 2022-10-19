@@ -52,7 +52,6 @@ module control(
                 `jneOp,
                 `jeOp:
                     jump     = 1'b1;
-                `incOp,
                 `addOp,
                 `subOp,
                 `xorOp,
@@ -60,7 +59,8 @@ module control(
                     regWrite = 1'b1;
                 `cmpOp:
                     cmpWrite = 1'b1;
-                `movIOp: begin
+                `movIOp,
+                `incOp: begin
                     regWrite = 1'b1;
                     aluImm   = 1'b1;
                     end

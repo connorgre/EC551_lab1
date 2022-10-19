@@ -61,58 +61,82 @@ module cpu_tb();
         // right now, memory and registers all == 0.
         // loadInstr == 1, fullReset == 0, resetPc == 0, clk == 0.
         // now to start running the clock loading instructions in.
-        // r1=10
+        
+        // 31: r1=10
         op   = `movIOp;
         arg1 = `r1;
         arg2 = 6'd10;
         `cycleClk;
         
-        //r2=20
+        // 32: r2=3
         op   = `movIOp;
         arg1 = `r2;
-        arg2 = 6'd20;
+        arg2 = 6'd3;
         `cycleClk;
         
-        //r3=r1 (10)
+        // 33: r3=r1 (10)
         op   = `movOp;
         arg1 = `r3;
         arg2 = `r1;
         `cycleClk;
-        
-        //r3=r3+r2 (10+20=30)
+               
+        // 34: r3=r3+r2 (10+3=13)
         op   = `addOp;
         arg1 = `r3;
         arg2 = `r2;
         `cycleClk;
         
-        //[r1] = r3 ([10] = 30)
+        // 35: [r3] = r1 ([13] = 10)
         op   = `storeOp;
-        arg1 = `r1;
+        arg1 = `r3;
+        arg2 = `r1;
+        `cycleClk;
+
+// LOOP START:
+        // 36: r4 = [r3] (r3 = 13, [13] = 10, r4=10)
+        op   = `loadOp;
+        arg1 = `r4;
         arg2 = `r3;
         `cycleClk;
         
-        //r4 = [r1] (r1 = 10, [10] = 30, r4=30)
-        op   = `loadOp;
+        // 37: r4++
+        op   = `incOp;
         arg1 = `r4;
-        arg2 = `r1;
         `cycleClk;
         
-        //r5 = r4
-        op   = `movOp;
-        arg1 = `r5;
+        // 38: store [r3], r4 ([13] = r4)
+        op   = `storeOp;
+        arg1 = `r3;
         arg2 = `r4;
         `cycleClk;
-
-        // because of the way instructions are loaded, the final instruction must be a nop.
-        // this can be fixed by blocking some 
+        
+        // 39: cmp r3, r4
+        op   = `cmpOp;
+        arg1 = `r3;
+        arg2 = `r4;
+        `cycleClk;
+        
+        // 40: jne LOOP_START
+        op   = `jneOp;
+        arg1 = 6'd0;
+        arg2 = 6'd36;
+        `cycleClk;
+        
+        // 41: jump to program start
+        op   = `jmpOp;
+        arg1 = 6'd0;
+        arg2 = 6'd31;
+        `cycleClk;
+        
         `nop;
         `cycleClk;
+        
         resetPc = 1'b1;
         loadInstr = 1'b0;
         #1;
         resetPc = 1'b0;
         // now the program should start running
-        #150;
+        #400;
         $finish;
     end
 
