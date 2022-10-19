@@ -9,5 +9,5 @@ module MemoryInterface(
     output      [15:0] memData
 );
     assign memAddress   = (memWrite == 1'b1) ? regData1 : regData2;
-    assign memData      = (memWrite == 1'b0) ? regData2 : regData1;
+    assign memData      = (memWrite == 1'b0) ? regData1 : regData2;
 endmodule

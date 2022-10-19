@@ -52,7 +52,7 @@ module RegisterFile(clk, reset, writeData, writeReg, regWrite, readReg1, readReg
         if (reset) 
           begin
              for (i=0; i<(2**regBits); i=i+1)
-               Reg_File[i] <= 0;
+               Reg_File[i] <= -1;
           end
         else if (regWrite)
           begin

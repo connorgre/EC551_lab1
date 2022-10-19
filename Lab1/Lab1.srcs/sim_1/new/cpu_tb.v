@@ -20,7 +20,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 `include "opCodes.vh"
 `define cycleClk #1 clk = ~clk; #1 clk = ~clk
-`define nop op = `haltOp; arg1 = `r0; arg2 = `r0
+`define nop op = 4'b1111; arg1 = `r0; arg2 = `r0
 module cpu_tb();
 
     wire [15:0] out;
@@ -72,46 +72,47 @@ module cpu_tb();
         arg1 = `r2;
         arg2 = 6'd20;
         `cycleClk;
-        /*
-        `nop;
-        `cycleClk;
-        `nop;
-        `cycleClk;
-        `nop;
-        `cycleClk;
-        */
+        
         //r3=r1 (10)
         op   = `movOp;
         arg1 = `r3;
         arg2 = `r1;
         `cycleClk;
-        /*
-        `nop;
-        `cycleClk;
-        `nop;
-        `cycleClk;
-        `nop;
-        `cycleClk;
-        */
+        
         //r3=r3+r2 (10+20=30)
         op   = `addOp;
         arg1 = `r3;
         arg2 = `r2;
         `cycleClk;
-        /*
+        
+        //[r1] = r3 ([10] = 30)
+        op   = `storeOp;
+        arg1 = `r1;
+        arg2 = `r3;
+        `cycleClk;
+        
+        //r4 = [r1] (r1 = 10, [10] = 30, r4=30)
+        op   = `loadOp;
+        arg1 = `r4;
+        arg2 = `r1;
+        `cycleClk;
+        
+        //r5 = r4
+        op   = `movOp;
+        arg1 = `r5;
+        arg2 = `r4;
+        `cycleClk;
+
+        // because of the way instructions are loaded, the final instruction must be a nop.
+        // this can be fixed by blocking some 
         `nop;
         `cycleClk;
-        `nop;
-        `cycleClk;
-        `nop;
-        `cycleClk;
-        */
         resetPc = 1'b1;
         loadInstr = 1'b0;
         #1;
         resetPc = 1'b0;
         // now the program should start running
-        #200;
+        #150;
         $finish;
     end
 

@@ -20,7 +20,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 `include "opCodes.vh"
 // Forwards inputs to avoid datapath hazards
-module ForwardingUnit(reg1_EX, reg2_EX, wbReg_ME, wbReg_WB, write_ME, write_WB, 
+module ForwardingUnit(reg1_EX, reg2_EX, wbReg_ME, wbReg_WB, write_ME, write_WB,
                         fwReg1, fwReg2);
 
     input [2:0]      reg1_EX,

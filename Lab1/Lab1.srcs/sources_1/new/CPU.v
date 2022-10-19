@@ -43,18 +43,21 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
     input  [15:0] instr;
     output [15:0] out;
 // forward declarations         <- should eventually move all the register wires here
-    wire [2:0] readReg1_ME;
-    wire [2:0] readReg2_ME;
-    wire [2:0] writeReg_ME;
-    wire writeMem_ME;
+    wire [2:0]  readReg1_ME;
+    wire [2:0]  readReg2_ME;
+    wire [2:0]  writeReg_ME;
+    wire        writeMem_ME;
     wire [15:0] memAddress_ME;
     wire [15:0] memDataOut_ME;
     wire [15:0] memDataIn_ME;
     wire [2:0]  writeReg_WB;
-    wire regWrite_WB;
-    wire regWrite_ME;
-    wire [15:0]   aluOut_ME;
+    wire        regWrite_WB;
+    wire        regWrite_ME;
+    wire [15:0] aluOut_ME;
     wire [15:0] outData_WB;
+    wire        readMem_EX;
+                  
+    wire        loadStall;
 
 
 ///////////////////////////////////////////////////////////////////////
@@ -103,14 +106,14 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
     wire [15:0] instr_ID;
     NBitReg #(.N(16)) regInstr_ID_EX (.inData(instr_IF), 
                                           .outData(instr_ID),
-                                          .enable(1'b1),
+                                          .enable(~loadStall),
                                           .clk(clk),
                                           .reset(fullReset));
     // moves the next PC into the current PC on the clock edge
     
     NBitReg #(.N(16)) regPC_ID_ID    (.inData(nextPcToReg),
                                       .outData(pc_IF),
-                                      .enable(1'b1),
+                                      .enable(~loadStall),
                                       .clk(clk),
                                       .reset(fullReset));
 ////////////////////////////////////////////////////////////////////////////////////
@@ -160,6 +163,8 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
     wire [11:0] jumpTarget;
     assign jumpTarget[11:0] = {arg1, arg2};
     
+    
+    
     wire        regWrite_ID;
     wire        readMem_ID;
     wire        writeMem_ID;
@@ -179,12 +184,20 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
                         .halt(halt_ID),
                         .cmpWrite(cmpWrite_ID),             
                         .aluOp(aluOp_ID));
+                        
+    StallController stallCtrl ( .readMem_EX(readMem_EX),
+                                .useReg2_ID(~aluImm_ID),
+                                .readReg_EX(readReg1_EX),
+                                .reg1_ID(readReg1_ID),
+                                .reg2_ID(readReg2_ID),
+                                .stall(loadStall));
 
+    wire [5:0] ctrlBus;
     wire [5:0] ctrlBus_ID;
     wire [5:0] ctrlBus_EX;
-    assign ctrlBus_ID[5:0] = {regWrite_ID, readMem_ID, writeMem_ID, 
+    assign ctrlBus[5:0] = {regWrite_ID, readMem_ID, writeMem_ID, 
                            aluImm_ID, jump_ID, halt_ID};
-
+    assign ctrlBus_ID[5:0] = (loadStall == 1'b1) ? 6'b000000 : ctrlBus;
     wire [15:0] regData1_EX;
     wire [15:0] regData2_EX;
     NBitReg #(.N(16)) arg1Reg_IDEX (.inData(regData1_ID),
@@ -233,7 +246,6 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////                   -- EXECUTION --                 /////////////////
 ////////////////////////////////////////////////////////////////////////////////////
-                //  !! DOES NOT DO HAZARD DETECTION RIGHT NOW !!  //
 // executes instruction
 /* 
    INPUT:   readReg1_EX, 
@@ -250,6 +262,7 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
             readReg2_ME,
             writeReg_ME
 */
+    assign readMem_EX = ctrlBus_EX[4];
     wire aluImm_EX   = ctrlBus_EX[2];
     wire halt_EX     = ctrlBus_EX[0];
     wire [15:0]         aluIn1,
@@ -295,7 +308,7 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
                                     .enable(1'b1),          // <- Need to fix
                                     .clk(clk),
                                     .reset(fullReset));
-    NBitReg #(.N(16)) regData2_EXME(.inData(regData2_EX),
+    NBitReg #(.N(16)) regData2_EXME(.inData(fwResult2),
                                     .outData(regData2_ME),
                                     .enable(1'b1),          // <- Need to fix
                                     .clk(clk),

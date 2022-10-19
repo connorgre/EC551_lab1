@@ -34,11 +34,11 @@ module Memory(clk, write, address, dataIn, dataOut, pcIn, instrOut, reset);
    
     reg [bitLen-1:0]mem_array [0:2**memBits];
    
-    always @(clk, posedge reset)   // <- write memory on posedge and negedge of clock
+    always @(posedge clk, posedge reset)
       begin
          if (reset)
             for(i = 0; i < 2**memBits; i=i+1)
-                mem_array[i] = 0;
+                mem_array[i] = i;
          else if(write)
            mem_array[address] = dataIn;
       end
