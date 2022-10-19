@@ -53,9 +53,11 @@ module control(
                 `jeOp:
                     jump     = 1'b1;
                 `addOp,
+                `saddOp,
                 `subOp,
                 `xorOp,
-                `movOp:
+                `movOp,
+                `smulOp:
                     regWrite = 1'b1;
                 `cmpOp:
                     cmpWrite = 1'b1;

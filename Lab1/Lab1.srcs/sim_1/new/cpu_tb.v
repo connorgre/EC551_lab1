@@ -62,6 +62,9 @@ module cpu_tb();
         // loadInstr == 1, fullReset == 0, resetPc == 0, clk == 0.
         // now to start running the clock loading instructions in.
         
+        
+        // simple program to that loads 10 into memory location 13,
+        // and then increments from 10 to 13 in a loop, then repeats.
         // 31: r1=10
         op   = `movIOp;
         arg1 = `r1;
@@ -92,37 +95,49 @@ module cpu_tb();
         arg2 = `r1;
         `cycleClk;
 
+        // 36 smul r0, r2 (-1 * 3)
+        op   = `smulOp;
+        arg1 = `r0;
+        arg2 = `r2;
+        `cycleClk;
+
 // LOOP START:
-        // 36: r4 = [r3] (r3 = 13, [13] = 10, r4=10)
+        // 37: r4 = [r3] (r3 = 13, [13] = 10, r4=10)
         op   = `loadOp;
         arg1 = `r4;
         arg2 = `r3;
         `cycleClk;
         
-        // 37: r4++
+        // 38: smul r0, r2;
+        op   = `smulOp;
+        arg1 = `r0;
+        arg2 = `r6;         // <- ~technically not allowed, but r6 != PC for this~
+        `cycleClk;
+        
+        // 39: r4++
         op   = `incOp;
         arg1 = `r4;
         `cycleClk;
         
-        // 38: store [r3], r4 ([13] = r4)
+        // 40: store [r3], r4 ([13] = r4)
         op   = `storeOp;
         arg1 = `r3;
         arg2 = `r4;
         `cycleClk;
         
-        // 39: cmp r3, r4
+        // 41: cmp r3, r4
         op   = `cmpOp;
         arg1 = `r3;
         arg2 = `r4;
         `cycleClk;
         
-        // 40: jne LOOP_START
+        // 42: jne LOOP_START
         op   = `jneOp;
         arg1 = 6'd0;
-        arg2 = 6'd36;
+        arg2 = 6'd37;
         `cycleClk;
         
-        // 41: jump to program start
+        // 43: jump to program start
         op   = `jmpOp;
         arg1 = 6'd0;
         arg2 = 6'd31;

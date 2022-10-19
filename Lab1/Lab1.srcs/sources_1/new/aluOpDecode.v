@@ -53,7 +53,8 @@ module aluOpDecode(
         case(opCode)
           `incOp:
             assign aluOp = `incAlu;
-          `addOp:
+          `addOp,
+          `saddOp:
             assign aluOp = `addAlu;
           `subOp:
             assign aluOp = `subAlu;
@@ -62,6 +63,8 @@ module aluOpDecode(
           `loadOp,
           `storeOp:
             assign aluOp = `passAlu;
+          `smulOp:
+            assign aluOp = `smulAlu;
           default:
             assign aluOp = `movAlu;
         endcase

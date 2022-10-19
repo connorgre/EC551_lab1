@@ -2,7 +2,7 @@
 
 `include "opCodes.vh"
 module ALU(
-    input       [15:0]  aluIn1,
+    input wire unsigned      [15:0]  aluIn1,
     input       [15:0]  aluIn2,
     input       [2:0]   aluOp,
     output reg  [15:0]  ALUresult,
@@ -23,6 +23,8 @@ module ALU(
                 ALUresult = aluIn2;
             `passAlu:       // pass (out = in1)
                 ALUresult = aluIn1;
+            `smulAlu:
+                ALUresult = aluIn1 * aluIn2;
             default: begin  // defualt to pass
                 $display("undefined alu op");
                 ALUresult = aluIn1;

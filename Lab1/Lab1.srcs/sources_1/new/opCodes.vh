@@ -28,8 +28,8 @@
 `define movOp   4'b1010 // MOV Rn, Rm   == move register
 `define storeOp 4'b1011 // MOV [Rn], Rm == store to memory
 `define loadOp  4'b1100 // MOV Rn, [Rm] == load from memory to register
-`define sp1Op   4'b1101
-`define sp2Op   4'b1110
+`define smulOp  4'b1101 // special_1
+`define saddOp  4'b1110 // special_2
 `define sp3Op   4'b1111
 
 // the ALU ops we need (can extend this)
@@ -39,6 +39,7 @@
 `define subAlu  3'b011
 `define xorAlu  3'b100
 `define passAlu 3'b101  // aluOut = Rn
+`define smulAlu 3'b110
 
 // convenient place to define register values to make generating
 // instructions easier.
@@ -48,6 +49,7 @@
 `define r3 6'b000011
 `define r4 6'b000100
 `define r5 6'b000101
+`define r6 6'b000111
 
 //convenient place to define the forwarding signals
 `define noFw 2'b00

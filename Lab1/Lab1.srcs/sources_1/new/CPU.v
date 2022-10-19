@@ -244,6 +244,14 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
                                     .enable(1'b1),          // <- need to fix
                                     .clk(clk),
                                     .reset(fullReset));
+    // THIS IS PURELY A FOR MAKING INSPECTION OF SIMULATION EASIER. CAN TAKE OUT FOR
+    // SYNTHESIS
+    wire [3:0] opCode_EX;
+    NBitReg #(.N(4)) opCodeReg_IDEX (   .inData(opCode),
+                                        .outData(opCode_EX),
+                                        .enable(1'b1),      // <- need to fix
+                                        .clk(clk),
+                                        .reset(fullReset));
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////                   -- EXECUTION --                 /////////////////
 ////////////////////////////////////////////////////////////////////////////////////
@@ -346,7 +354,14 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
                                     .reset(fullReset));
     
                 
-    
+    // THIS IS PURELY A FOR MAKING INSPECTION OF SIMULATION EASIER. CAN TAKE OUT FOR
+    // SYNTHESIS
+    wire [3:0] opCode_ME;
+    NBitReg #(.N(4)) opCodeReg_EXME (   .inData(opCode_EX),
+                                        .outData(opCode_ME),
+                                        .enable(1'b1),      // <- need to fix
+                                        .clk(clk),
+                                        .reset(fullReset));
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////                    -- MEMORY --                   /////////////////
 ////////////////////////////////////////////////////////////////////////////////////
@@ -398,6 +413,13 @@ module CPU(out, clk, fullReset, resetPc, loadInstr, instr);
                                     .enable(1'b1),              // <- Need to fix
                                     .clk(clk),
                                     .reset(fullReset));
+                                    
+    wire [3:0] opCode_WB;
+    NBitReg #(.N(4)) opCodeReg_MEWB (   .inData(opCode_ME),
+                                        .outData(opCode_WB),
+                                        .enable(1'b1),      // <- need to fix
+                                        .clk(clk),
+                                        .reset(fullReset));
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////                  -- WRITE BACK --                 /////////////////
 ////////////////////////////////////////////////////////////////////////////////////
