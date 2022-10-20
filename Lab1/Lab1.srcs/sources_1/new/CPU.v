@@ -452,5 +452,5 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr);
     // this is declared in ID stage, bc register file is instantiated there
     assign regWrite_WB = ctrlBus_WB[5];
     wire halt_WB       = ctrlBus_WB[0];
-    assign out = (regWrite_WB) ? outData_WB : -1;
+    assign out = (regWrite_WB) ? outData_WB : ((globalHalt) ? 16'hAAAA : 16'hBBBB);
 endmodule
