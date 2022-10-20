@@ -71,9 +71,7 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr);
 ///////////////////////////////////////////////////////////////////////
 ////////////////        -- INSTRUCTION FETCH --        ////////////////
 ///////////////////////////////////////////////////////////////////////
-    // the PC is NOT stored in the register file.  It is its OWN register,
-    // to change this we'd need to add an extra input/output to register file
-    wire [15:0] pc_IF;
+    wire [15:0] pc_IF;      // comes from register file
     wire [15:0] firstPc;
     wire [15:0] nextPc;
     wire [15:0] instr_IF;
@@ -102,7 +100,10 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr);
                 .reset(fullReset),
                 .pcIn(memPcIn),
                 .instrOut(instr_IF));
-
+                
+    // this is an inut into the register file
+    wire [15:0] nextPcToReg = (resetPc == 1'b1) ? firstPc : nextPc;
+    
     // passes current instruction into decode
     wire [15:0] instr_ID;
     NBitReg #(.N(16)) regInstr_ID_EX (.inData(instr_IF), 
@@ -111,15 +112,7 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr);
                                           .clk(clk),
                                           .reset(fullReset));
 
-    // moves the next PC into the current PC on the clock edge
-    // not the best solution, but this ensures that the PC actually does get reset properly without
-    // worrying about weird clock edges messing stuff up
-    wire [15:0] nextPcToReg = (resetPc == 1'b1) ? firstPc : nextPc;
-    NBitReg #(.N(16)) regPC_ID_ID    (.inData(nextPcToReg),
-                                      .outData(pc_IF),
-                                      .enable(~loadStall & globalRegEn),
-                                      .clk(clk),
-                                      .reset(fullReset));
+
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////              -- INSTRUCTION DECODE --             /////////////////
 ////////////////////////////////////////////////////////////////////////////////////
@@ -155,6 +148,8 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr);
     assign writeReg_ID = arg1[2:0];
     assign readReg2_ID = arg2[2:0];
     wire writeToRegFile = ((fullReset == 1'b1) || (loadInstr == 1'b1)) ? 1'b0 : regWrite_WB;
+    
+    wire pcEnable = (~loadStall) & globalRegEn;
     RegisterFile regFile (.clk(clk),
                           .reset(fullReset),
                           .writeData(outData_WB),
@@ -163,7 +158,10 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr);
                           .readReg1(readReg1_ID),
                           .readReg2(readReg2_ID),
                           .readData1(regData1_ID),
-                          .readData2(regData2_ID));
+                          .readData2(regData2_ID),
+                          .pcIn(nextPcToReg),
+                          .pcOut(pc_IF),
+                          .pcEnable(pcEnable));
     
     // see comment in module if je and jne have hazards with a cmp instruction
     // right before them.  This ~shouldn't~ be an issue but could be.
@@ -382,7 +380,6 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr);
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////                    -- MEMORY --                   /////////////////
 ////////////////////////////////////////////////////////////////////////////////////
-                //  !! DOES NOT DO HAZARD DETECTION RIGHT NOW !!  //
 // handles memory
 /*
    INPUT:   aluOut_ME,

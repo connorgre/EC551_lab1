@@ -118,10 +118,10 @@ module cpu_tb();
         arg2 = `r3;
         `cycleClk;
         
-        // 38: smul r0, r2;
+        // 38: smul r0, r5 (r5 = -1, flips r0)
         op   = `smulOp;
         arg1 = `r0;
-        arg2 = `r6;         // <- ~technically not allowed, but r6 != PC for this~
+        arg2 = `r5;
         `cycleClk;
         
         // 39: r4++
@@ -147,7 +147,7 @@ module cpu_tb();
         arg2 = 6'd37;
         `cycleClk;
         
-        // 43: movMem [r1], r[0] (r1 = 10, [r0] = r0 (mem is initialized to its own address))
+        // 43: movMem [r1], r[0] (r1 = 10, [r0] = r0[11:0] (mem is initialized to its own address))
         op   = `movMemOp;
         arg1 = `r1;
         arg2 = `r0;

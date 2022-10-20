@@ -22,14 +22,14 @@
 // R6 is the program counter, and is NOT stored in the register file, it is
 // much simpler implementation-wise to have the PC be its own independent register
 module RegisterFile(clk, reset, writeData, writeReg, regWrite, readReg1, readReg2, 
-                    readData1, readData2);
+                    readData1, readData2, pcIn, pcOut, pcEnable);
    parameter bitLen = 16; // bitlength of registers
    parameter regBits = 3; // number registers is 2**regBits
    
-   output [bitLen-1:0] readData1, readData2;
+   output [bitLen-1:0] readData1, readData2, pcOut;
    reg    [bitLen-1:0] readData1, readData2;
-   input               reset;
-   input [bitLen-1:0]  writeData;
+   input               reset, pcEnable;
+   input [bitLen-1:0]  writeData, pcIn;
    input [regBits-1:0] writeReg, readReg1, readReg2;
    input               regWrite, clk;
    
@@ -49,15 +49,19 @@ module RegisterFile(clk, reset, writeData, writeReg, regWrite, readReg1, readReg
       
    always @(posedge clk)
    begin
-        if (reset) 
-          begin
-             for (i=0; i<(2**regBits); i=i+1)
+        if (reset) begin
+             // writing to the PC is handled separately, only go up to 5
+             for (i=0; i<(2**regBits-1); i=i+1)
                Reg_File[i] <= -1;
-          end
-        else if (regWrite)
-          begin
+        end
+        // DO NOT ALLOW WRITING TO R6
+        else if ((regWrite) && (writeReg != 6'd6)) begin
                 Reg_File[writeReg] <= writeData;
-          end
+        end
+        if (pcEnable) begin
+            Reg_File[6] = pcIn;
+        end
    end
+   assign pcOut = Reg_File[6];
 
 endmodule
