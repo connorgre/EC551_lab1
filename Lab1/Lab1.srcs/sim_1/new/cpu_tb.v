@@ -39,7 +39,7 @@ module cpu_tb();
                 .instr(instr));
                 
     always begin
-        #5;
+        #2.5;
         // only run the clock when we aren't loading instructions in
         if (fullReset == 1'b0 && resetPc == 1'b0 && loadInstr == 1'b0)
             clk = ~clk;
@@ -58,7 +58,7 @@ module cpu_tb();
         `cycleClk;
         #1 resetPc = 1'b0;
         
-        // right now, memory and registers all == 0.
+        // right now, memory and registers all == -1.
         // loadInstr == 1, fullReset == 0, resetPc == 0, clk == 0.
         // now to start running the clock loading instructions in.
         
@@ -137,7 +137,13 @@ module cpu_tb();
         arg2 = 6'd37;
         `cycleClk;
         
-        // 43: jump to program start
+        // 43: movMem [r1], r[0] (r1 = 10, [r0] = r0 (mem is initialized to its own address))
+        op   = `movMemOp;
+        arg1 = `r1;
+        arg2 = `r0;
+        `cycleClk;
+        
+        // 44: jump to program start
         op   = `jmpOp;
         arg1 = 6'd0;
         arg2 = 6'd31;
@@ -151,7 +157,7 @@ module cpu_tb();
         #1;
         resetPc = 1'b0;
         // now the program should start running
-        #400;
+        #500;
         $finish;
     end
 

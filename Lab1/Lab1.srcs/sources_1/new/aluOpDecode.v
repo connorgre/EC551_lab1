@@ -61,7 +61,8 @@ module aluOpDecode(
           `xorOp:
             assign aluOp = `xorAlu;
           `loadOp,
-          `storeOp:
+          `storeOp,
+          `movMemOp:
             assign aluOp = `passAlu;
           `smulOp:
             assign aluOp = `smulAlu;

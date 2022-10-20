@@ -15,22 +15,22 @@
     //4'b1101: // SP1;
     //4'b1110: // SP2;
     //4'b1111: // SP3;
-`define haltOp  4'b0000
-`define incOp   4'b0001
-`define jmpOp   4'b0010
-`define jneOp   4'b0011
-`define jeOp    4'b0100
-`define addOp   4'b0101
-`define subOp   4'b0110
-`define xorOp   4'b0111
-`define cmpOp   4'b1000
-`define movIOp  4'b1001 // MOV Rn, num  == move immediate
-`define movOp   4'b1010 // MOV Rn, Rm   == move register
-`define storeOp 4'b1011 // MOV [Rn], Rm == store to memory
-`define loadOp  4'b1100 // MOV Rn, [Rm] == load from memory to register
-`define smulOp  4'b1101 // special_1
-`define saddOp  4'b1110 // special_2
-`define sp3Op   4'b1111
+`define haltOp      4'b0000
+`define incOp       4'b0001
+`define jmpOp       4'b0010
+`define jneOp       4'b0011
+`define jeOp        4'b0100
+`define addOp       4'b0101
+`define subOp       4'b0110
+`define xorOp       4'b0111
+`define cmpOp       4'b1000
+`define movIOp      4'b1001 // mov Rn, num  -- move immediate
+`define movOp       4'b1010 // mov Rn, Rm   -- move register
+`define storeOp     4'b1011 // mov [Rn], Rm -- store to memory
+`define loadOp      4'b1100 // mov Rn, [Rm] -- load from memory to register
+`define smulOp      4'b1101 // special_1 - smul Rn, Rm
+`define saddOp      4'b1110 // special_2 - sadd Rn, Rm
+`define movMemOp    4'b1111 // special_3 - mov [Rn], [Rm] -- mov data at Rm to Rn
 
 // the ALU ops we need (can extend this)
 `define movAlu  3'b000
