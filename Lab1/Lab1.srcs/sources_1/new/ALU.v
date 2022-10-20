@@ -2,7 +2,7 @@
 
 `include "opCodes.vh"
 module ALU(
-    input wire unsigned      [15:0]  aluIn1,
+    input       [15:0]  aluIn1,
     input       [15:0]  aluIn2,
     input       [2:0]   aluOp,
     output reg  [15:0]  ALUresult,

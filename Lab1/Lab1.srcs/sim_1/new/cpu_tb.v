@@ -20,13 +20,14 @@
 //////////////////////////////////////////////////////////////////////////////////
 `include "opCodes.vh"
 `define cycleClk #1 clk = ~clk; #1 clk = ~clk
-`define nop op = 4'b1111; arg1 = `r0; arg2 = `r0
+`define halt op = `haltOp; arg1 = `r0; arg2 = `r0
 module cpu_tb();
 
     wire [15:0] out;
-    reg         clk, fullReset, resetPc, loadInstr;
+    reg         clk, fullReset, resetPc, loadInstr, resetHalt;
     reg  [3:0]  op;
     reg  [5:0]  arg1, arg2;
+
     wire [15:0] instr;
     assign instr[15:12] = op;
     assign instr[11:6]  = arg1;
@@ -36,7 +37,8 @@ module cpu_tb();
                 .fullReset(fullReset), 
                 .resetPc(resetPc), 
                 .loadInstr(loadInstr), 
-                .instr(instr));
+                .instr(instr),
+                .resetHalt(resetHalt));
                 
     always begin
         #2.5;
@@ -44,7 +46,15 @@ module cpu_tb();
         if (fullReset == 1'b0 && resetPc == 1'b0 && loadInstr == 1'b0)
             clk = ~clk;
     end
+    
+    always begin
+        if (op == `haltOp)
+            #50 resetHalt = 1'b1;
+            #5 resetHalt = 1'b0;
+    end
+
     initial begin
+        resetHalt   = 1'b0;
         clk         = 1'b1;
         fullReset   = 1'b0;
         resetPc     = 1'b1;
@@ -143,13 +153,16 @@ module cpu_tb();
         arg2 = `r0;
         `cycleClk;
         
+        `halt;
+        `cycleClk;
+        
         // 44: jump to program start
         op   = `jmpOp;
         arg1 = 6'd0;
         arg2 = 6'd31;
         `cycleClk;
         
-        `nop;
+        `halt;
         `cycleClk;
         
         resetPc = 1'b1;
