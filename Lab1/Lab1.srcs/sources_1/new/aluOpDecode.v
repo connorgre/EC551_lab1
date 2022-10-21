@@ -52,22 +52,22 @@ module aluOpDecode(
         // simplify logic in the top module
         case(opCode)
           `incOp:
-            assign aluOp = `incAlu;
+            aluOp = `incAlu;
           `addOp,
           `saddOp:
-            assign aluOp = `addAlu;
+            aluOp = `addAlu;
           `subOp:
-            assign aluOp = `subAlu;
+            aluOp = `subAlu;
           `xorOp:
-            assign aluOp = `xorAlu;
+            aluOp = `xorAlu;
           `loadOp,
           `storeOp,
           `movMemOp:
-            assign aluOp = `passAlu;
+            aluOp = `passAlu;
           `smulOp:
-            assign aluOp = `smulAlu;
+            aluOp = `smulAlu;
           default:
-            assign aluOp = `movAlu;
+            aluOp = `movAlu;
         endcase
     end
 endmodule

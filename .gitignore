@@ -1,8 +1,8 @@
 *.log
 *.jou
 *.str
-*.wcfg
 Lab1/.Xil/*
 Lab1/Lab1.cache/*
 Lab1/Lab1.sim/*
+Lab1/Lab1.runs/*
 

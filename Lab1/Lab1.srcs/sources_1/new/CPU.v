@@ -37,10 +37,11 @@
 // passing into registers. Part of the reason this would be difficult is multiple 
 // stages need to access memory (Fetch and Memory), and multiple need the register file
 // (Decode and WriteBack).  Additionally, it would make finding hazards more difficult
-module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr);
+module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr, rfStreamOut);
     parameter regBits = 3;
     input clk, fullReset, loadInstr, resetPc, resetHalt;
     input  [15:0] instr;
+    output [16 * 8 - 1:0]  rfStreamOut; // large bus holding all the register data
     output [15:0] out;
 // forward declarations         <- should eventually move all the register wires here
     wire [2:0]  readReg1_ME;
@@ -161,7 +162,8 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr);
                           .readData2(regData2_ID),
                           .pcIn(nextPcToReg),
                           .pcOut(pc_IF),
-                          .pcEnable(pcEnable));
+                          .pcEnable(pcEnable),
+                          .rfStreamOut(rfStreamOut));
     
     // see comment in module if je and jne have hazards with a cmp instruction
     // right before them.  This ~shouldn't~ be an issue but could be.
