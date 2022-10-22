@@ -99,6 +99,7 @@ module cpu_tb();
         arg2 = `r2;
         `cycleClk;
         
+        
         // 35: [r3] = r1 ([13] = 10)
         op   = `storeOp;
         arg1 = `r3;

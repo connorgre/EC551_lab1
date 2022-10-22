@@ -44,10 +44,12 @@ module control(
         aluImm   = 1'b0;
         movMem   = 1'b0;
         halt     = 1'b0;
+        cmpWrite = 1'b0;
         if (forceZero == 1'b0) begin
             case(opCode)
-                `haltOp:
+                `haltOp: begin
                     halt     = 1'b1;
+                  end
                 `addOp,
                 `saddOp,
                 `subOp,
@@ -72,14 +74,11 @@ module control(
                     writeMem = 1'b1;
                     movMem   = 1'b1;
                   end
-                default: begin  // not really necessary, but putting it in bc ur supposed to have default case
-                    regWrite = 1'b0;
-                    readMem  = 1'b0;
-                    writeMem = 1'b0;
-                    aluImm   = 1'b0;
-                    movMem   = 1'b0;
-                    halt     = 1'b0;
-                end
+                `jmpOp,
+                `jneOp,
+                `jeOp:
+                    // only here to complete the case
+                    halt      = 1'b0;
               endcase
           end
     end

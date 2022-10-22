@@ -3,6 +3,27 @@
 // Company: 
 // Engineer: 
 // 
+// Create Date: 10/21/2022 10:22:35 PM
+// Design Name: 
+// Module Name: VGA_Color2
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
 // Create Date: 10/21/2022 06:47:05 PM
 // Design Name: 
 // Module Name: VGA_Color
@@ -20,7 +41,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module VGA_Color(color1Out, color2Out, color3Out, rfStreamIn, x, y, clk);
+module VGA_Color2(color1Out, color2Out, color3Out, rfStreamIn, x, y, clk);
     output reg  [3:0]   color1Out;
     output reg  [3:0]   color2Out;
     output reg  [3:0]   color3Out;
@@ -40,7 +61,10 @@ module VGA_Color(color1Out, color2Out, color3Out, rfStreamIn, x, y, clk);
     integer j;
     reg colorBit;
     reg colorBorder;
-        
+    
+    reg [479:0]vgaArr [639:0]; 
+    
+    
     always@(posedge clk) begin
         colorBit = 1'b0;
         colorBorder = 1'b0;

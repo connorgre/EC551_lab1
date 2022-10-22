@@ -6,3 +6,8 @@ Lab1/Lab1.cache/*
 Lab1/Lab1.sim/*
 Lab1/Lab1.runs/*
 
+labBuild/labBuild.cache/*
+labBuild/labBuild.hw/*
+labBuild/labBuild.ip_user_files/*
+labBuild/labBuild.runs/*
+labBuild/labBuild.sim/*

@@ -59,7 +59,6 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr, rfStreamOu
     wire        readMem_EX;
     wire        movMem_ME;
                   
-    wire        loadStall;
     wire        doJump_ID;
     wire [11:0] jumpTarget;
     wire        cmpRes_EX;
@@ -67,7 +66,9 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr, rfStreamOu
     // want to make sure we can write the 0s, and that we aren't halting
     // the registers during the load phase
     wire        globalRegEn = ~globalHalt | loadInstr | fullReset;
-
+    wire [6:0] ctrlBus_ME;          
+    wire [6:0] ctrlBus_WB;
+    wire [15:0] regData2_ME;
 
 ///////////////////////////////////////////////////////////////////////
 ////////////////        -- INSTRUCTION FETCH --        ////////////////
@@ -76,7 +77,7 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr, rfStreamOu
     wire [15:0] firstPc;
     wire [15:0] nextPc;
     wire [15:0] instr_IF;
-    
+    wire   regWrite;
     // The simulator requires that the code be loaded into location 31 (decimal).
     // this muxes the pc_if (from nextPc -> reg -> pc_if), with this initial value
     assign firstPc = 16'd31;
@@ -109,7 +110,7 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr, rfStreamOu
     wire [15:0] instr_ID;
     NBitReg #(.N(16)) regInstr_ID_EX (.inData(instr_IF), 
                                           .outData(instr_ID),
-                                          .enable(~loadStall & globalRegEn),
+                                          .enable(globalRegEn),
                                           .clk(clk),
                                           .reset(fullReset));
 
@@ -150,7 +151,7 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr, rfStreamOu
     assign readReg2_ID = arg2[2:0];
     wire writeToRegFile = ((fullReset == 1'b1) || (loadInstr == 1'b1)) ? 1'b0 : regWrite_WB;
     
-    wire pcEnable = (~loadStall) & globalRegEn;
+    wire pcEnable = globalRegEn;
     RegisterFile regFile (.clk(clk),
                           .reset(fullReset),
                           .writeData(outData_WB),
@@ -201,42 +202,38 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr, rfStreamOu
                                 .haltReset(haltReset),
                                 .reset(fullReset));
     assign globalHalt = haltOut & ~loadInstr;
-                        
-    StallController stallCtrl ( .readMem_EX(readMem_EX),
-                                .useReg2_ID(~aluImm_ID),
-                                .readReg_EX(readReg1_EX),
-                                .reg1_ID(readReg1_ID),
-                                .reg2_ID(readReg2_ID),
-                                .stall(loadStall));
 
-    wire [6:0] ctrlBus;
     wire [6:0] ctrlBus_ID;
     wire [6:0] ctrlBus_EX;
-    assign ctrlBus[6:0] = {movMem_ID, regWrite_ID, readMem_ID, writeMem_ID, 
+    assign ctrlBus_ID[6:0] = {movMem_ID, regWrite_ID, readMem_ID, writeMem_ID, 
                            aluImm_ID, cmpWrite_ID, halt_ID};
-    assign ctrlBus_ID[6:0] = (loadStall == 1'b1) ? 7'b0000000 : ctrlBus;
+
     wire [15:0] regData1_EX;
     wire [15:0] regData2_EX;
-    NBitReg #(.N(16)) arg1Reg_IDEX (.inData(regData1_ID),
+    wire [15:0] regData1ToEX;
+    wire [15:0] regData2ToEX;
+    wire fw1, fw2;
+    ForwardingUnit fwUnit (.reg1_ID(readReg1_ID),
+                            .reg2_ID(readReg2_ID),
+                            .wbReg_WB(writeReg_WB),
+                            .writeEn_WB(regWrite_WB),
+                            .fw1(fw1),
+                            .fw2(fw2));
+    assign regData1ToEX[15:0] = (fw1 == 1'b1) ? outData_WB : regData1_ID;
+    assign regData2ToEX[15:0] = (fw2 == 1'b1) ? outData_WB : regData2_ID;
+    
+    NBitReg #(.N(16)) arg1Reg_IDEX (.inData(regData1ToEX),
                                     .outData(regData1_EX),
                                     .enable(globalRegEn),
                                     .clk(clk),
                                     .reset(fullReset));
-    NBitReg #(.N(16)) arg2Reg_IDEX (.inData(regData2_ID),
+                                    
+    NBitReg #(.N(16)) arg2Reg_IDEX (.inData(regData2ToEX),
                                     .outData(regData2_EX),
                                     .enable(globalRegEn),
                                     .clk(clk),
                                     .reset(fullReset));
-    NBitReg #(.N(3)) read1Reg_IDEX  (.inData(readReg1_ID),
-                                    .outData(readReg1_EX),
-                                    .enable(globalRegEn),
-                                    .clk(clk),
-                                    .reset(fullReset));
-    NBitReg #(.N(3)) read2Reg_IDEX  (.inData(readReg2_ID),
-                                    .outData(readReg2_EX),
-                                    .enable(globalRegEn),
-                                    .clk(clk),
-                                    .reset(fullReset));
+    
     NBitReg #(.N(3)) writeReg_IDEX  (.inData(writeReg_ID),
                                     .outData(writeReg_EX),
                                     .enable(globalRegEn),
@@ -261,14 +258,6 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr, rfStreamOu
                                     .clk(clk),
                                     .reset(fullReset));
                                     
-    // THIS IS PURELY A FOR MAKING INSPECTION OF SIMULATION EASIER. CAN TAKE OUT FOR
-    // SYNTHESIS
-    wire [3:0] opCode_EX;
-    NBitReg #(.N(4)) opCodeReg_IDEX (   .inData(opCode),
-                                        .outData(opCode_EX),
-                                        .enable(globalRegEn),
-                                        .clk(clk),
-                                        .reset(fullReset));
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////                   -- EXECUTION --                 /////////////////
 ////////////////////////////////////////////////////////////////////////////////////
@@ -288,6 +277,7 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr, rfStreamOu
             readReg2_ME,
             writeReg_ME
 */
+    assign regWrite   = ctrlBus_EX[5];
     assign readMem_EX = ctrlBus_EX[4];
     wire aluImm_EX    = ctrlBus_EX[2];
     wire cmpWrite_EX  = ctrlBus_EX[1];
@@ -295,30 +285,8 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr, rfStreamOu
     wire [15:0]         aluIn1,
                         aluIn2;
 
-    // since pass and mov are alu ops, no need to mux the aluOut with anything
-    wire [1:0]  fwReg1, fwReg2;
-    ForwardingUnit fwUnit ( .reg1_EX(readReg1_EX), 
-                            .reg2_EX(readReg2_EX), 
-                            .wbReg_ME(writeReg_ME), 
-                            .wbReg_WB(writeReg_WB), 
-                            .write_ME(regWrite_ME), 
-                            .write_WB(regWrite_WB), 
-                            .fwReg1(fwReg1), 
-                            .fwReg2(fwReg2));
-    wire [15:0] fwResult1, fwResult2;
-    ForwardMux fwMux1 ( .out(fwResult1),
-                        .data_EX(regData1_EX),
-                        .data_ME(aluOut_ME),
-                        .data_WB(outData_WB),
-                        .select(fwReg1));
-    ForwardMux fwMux2 ( .out(fwResult2),
-                        .data_EX(regData2_EX),
-                        .data_ME(aluOut_ME),
-                        .data_WB(outData_WB),
-                        .select(fwReg2));
-
-    assign aluIn1 = fwResult1;
-    ALU_Mux aluMuxIn2 ( .regData2(fwResult2), 
+    assign aluIn1 = regData1_EX;
+    ALU_Mux aluMuxIn2 ( .regData2(regData2_EX), 
                         .arg2(imm_EX), 
                         .ALUSrc(~aluImm_EX), 
                         .ALU_Mux_out(aluIn2));
@@ -336,49 +304,14 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr, rfStreamOu
                             .reset(fullReset), 
                             .cmpResult(cmpRes_EX));
     
-    wire [15:0]   regData2_ME;
-    NBitReg #(.N(16)) aluOut_EXME ( .inData(aluOut_EX),
-                                    .outData(aluOut_ME),
-                                    .enable(globalRegEn),
-                                    .clk(clk),
-                                    .reset(fullReset));
-    NBitReg #(.N(16)) regData2_EXME(.inData(fwResult2),
-                                    .outData(regData2_ME),
-                                    .enable(globalRegEn),
-                                    .clk(clk),
-                                    .reset(fullReset));
-    wire [6:0] ctrlBus_ME;          
-    NBitReg #(.N(7))  ctrlReg_EXME (.inData(ctrlBus_EX),
-                                    .outData(ctrlBus_ME),
-                                    .enable(globalRegEn),
-                                    .clk(clk),
-                                    .reset(fullReset));
     
-    NBitReg #(.N(3)) read1Reg_EXME (.inData(readReg1_EX),
-                                    .outData(readReg1_ME),
-                                    .enable(globalRegEn),
-                                    .clk(clk),
-                                    .reset(fullReset));
-    NBitReg #(.N(3)) read2Reg_EXME (.inData(readReg2_EX),
-                                    .outData(readReg2_ME),
-                                    .enable(globalRegEn),
-                                    .clk(clk),
-                                    .reset(fullReset));
-    NBitReg #(.N(3)) writeReg_EXME (.inData(writeReg_EX),
-                                    .outData(writeReg_ME),
-                                    .enable(globalRegEn),
-                                    .clk(clk),
-                                    .reset(fullReset));
+    assign aluOut_ME = aluOut_EX;
+    assign regData2_ME = regData2_EX;
+    assign ctrlBus_ME = ctrlBus_EX;
     
-                
-    // THIS IS PURELY A FOR MAKING INSPECTION OF SIMULATION EASIER. CAN TAKE OUT FOR
-    // SYNTHESIS
-    wire [3:0] opCode_ME;
-    NBitReg #(.N(4)) opCodeReg_EXME (   .inData(opCode_EX),
-                                        .outData(opCode_ME),
-                                        .enable(globalRegEn),
-                                        .clk(clk),
-                                        .reset(fullReset));
+    assign readReg2_ME = readReg2_EX;
+    assign writeReg_ME = writeReg_EX;
+    
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////                    -- MEMORY --                   /////////////////
 ////////////////////////////////////////////////////////////////////////////////////
@@ -398,7 +331,6 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr, rfStreamOu
     assign regWrite_ME = ctrlBus_ME[5];
     wire readMem_ME    = ctrlBus_ME[4];
     assign writeMem_ME = ctrlBus_ME[3];
-    wire halt_ME       = ctrlBus_ME[0];
     
     // THE MEMORY UNIT IS INSTANTIATED IN INSTRUCTION FETCH STAGE
     // memAddress_ME, memDataIn_ME, writeMem_ME, and readMem_ME are
@@ -413,29 +345,11 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr, rfStreamOu
                         .in1(memDataOut_ME),
                         .in2(aluOut_ME),
                         .select(readMem_ME));
-    NBitReg #(.N(16)) out_MEWB (    .inData(memAluMuxOut),
-                                    .outData(outData_WB),
-                                    .enable(globalRegEn),
-                                    .clk(clk),
-                                    .reset(fullReset));
-    wire [6:0] ctrlBus_WB;
-    NBitReg #(.N(7)) ctrlBus_MEWB ( .inData(ctrlBus_ME),
-                                    .outData(ctrlBus_WB),
-                                    .enable(globalRegEn),
-                                    .clk(clk),
-                                    .reset(fullReset));
-    NBitReg #(.N(3)) writeReg_MEWB (.inData(writeReg_ME),
-                                    .outData(writeReg_WB),
-                                    .enable(globalRegEn),
-                                    .clk(clk),
-                                    .reset(fullReset));
+   
+    assign outData_WB = memAluMuxOut;
+    assign ctrlBus_WB = ctrlBus_ME;
+    assign writeReg_WB = writeReg_ME;
                                     
-    wire [3:0] opCode_WB;
-    NBitReg #(.N(4)) opCodeReg_MEWB (   .inData(opCode_ME),
-                                        .outData(opCode_WB),
-                                        .enable(globalRegEn),
-                                        .clk(clk),
-                                        .reset(fullReset));
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////                  -- WRITE BACK --                 /////////////////
 ////////////////////////////////////////////////////////////////////////////////////
@@ -449,7 +363,6 @@ module CPU(out, clk, fullReset, resetPc, resetHalt, loadInstr, instr, rfStreamOu
     OUTPUT: NONE -- but writes to register file
 */
     // this is declared in ID stage, bc register file is instantiated there
-    assign regWrite_WB = ctrlBus_WB[5];
-    wire halt_WB       = ctrlBus_WB[0];
-    assign out = (regWrite_WB) ? outData_WB : ((globalHalt) ? 16'hAAAA : 16'hBBBB);
+    assign regWrite_WB = regWrite;
+    assign out = (regWrite_WB) ? outData_WB : ((globalHalt) ? 16'd11111 : 16'd33333);
 endmodule

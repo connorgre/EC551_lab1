@@ -26,9 +26,9 @@ module RegisterFile(clk, reset, writeData, writeReg, regWrite, readReg1, readReg
     parameter bitLen = 16; // bitlength of registers
     parameter regBits = 3; // number registers is 2**regBits
    
-    output [bitLen-1:0] readData1, readData2, pcOut;
-    reg    [bitLen-1:0] readData1, readData2;
-    output [16 * 8 - 1:0]  rfStreamOut;
+    output reg [bitLen-1:0] readData1, readData2;
+    output wire [bitLen-1:0] pcOut;
+    output wire [16 * 8 - 1:0]  rfStreamOut;
     input               reset, pcEnable;
     input [bitLen-1:0]  writeData, pcIn;
     input [regBits-1:0] writeReg, readReg1, readReg2;
@@ -39,13 +39,15 @@ module RegisterFile(clk, reset, writeData, writeReg, regWrite, readReg1, readReg
    
     always @(*) // <- always want to be reading from the register file
     begin
-        readData1 = Reg_File[readReg1];
-        readData2 = Reg_File[readReg2];
         //Register File Write Through
         if ((readReg1 == writeReg) && (regWrite == 1'b1))
-          readData1 = writeData;
+            readData1 <= writeData;
+        else
+            readData1 <= Reg_File[readReg1];
         if ((readReg2 == writeReg) && (regWrite == 1'b1))
-          readData2 = writeData;
+            readData2 <= writeData;
+        else
+            readData2 <= Reg_File[readReg2];
     end
       
     always @(posedge clk)

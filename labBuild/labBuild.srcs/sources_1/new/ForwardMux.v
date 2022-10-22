@@ -29,6 +29,6 @@ module ForwardMux(out, data_EX, data_ME, data_WB, select);
     input   [1:0]   select;
     
     // the last ternary is unnecessary, but I have it for error checking/ completeness
-    assign out = (select == `noFw) ? data_EX : ((select == `fwME) ? data_ME : ((select == `fwWB) ? data_WB : -1));
+    assign out = (select == `noFw) ? data_EX : ((select == `fwME) ? data_ME :  data_WB);
             
 endmodule

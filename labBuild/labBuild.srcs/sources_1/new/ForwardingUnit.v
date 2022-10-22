@@ -20,31 +20,23 @@
 //////////////////////////////////////////////////////////////////////////////////
 `include "opCodes.vh"
 // Forwards inputs to avoid datapath hazards
-module ForwardingUnit(reg1_EX, reg2_EX, wbReg_ME, wbReg_WB, write_ME, write_WB,
-                        fwReg1, fwReg2);
+module ForwardingUnit(reg1_ID, reg2_ID, wbReg_WB, writeEn_WB,
+                      fw1, fw2);
 
-    input [2:0]      reg1_EX,
-                     reg2_EX,
-                     wbReg_ME,
+    input [2:0]      reg1_ID,
+                     reg2_ID,
                      wbReg_WB;
-    input            write_ME,
-                     write_WB;
-    output reg [1:0] fwReg1,
-                     fwReg2;
+    input            writeEn_WB;
+    output reg  fw1, fw2;
 
     always@(*) begin
-        if ((reg1_EX == wbReg_ME) && (write_ME == 1'b1))
-            fwReg1 = `fwME;
-        else if ((reg1_EX == wbReg_WB) && (write_WB == 1'b1))
-            fwReg1 = `fwWB;
-        else
-            fwReg1 = `noFw;
-
-        if ((reg2_EX == wbReg_ME) && (write_ME == 1'b1))
-            fwReg2 = `fwME;
-        else if ((reg2_EX == wbReg_WB) && (write_WB == 1'b1))
-            fwReg2 = `fwWB;
-        else
-            fwReg2 = `noFw;
+        fw1 = 1'b0;
+        fw2 = 1'b0;
+        if (writeEn_WB) begin
+            if (reg1_ID == wbReg_WB)
+                fw1 = 1'b1;
+            if (reg2_ID == wbReg_WB)
+                fw2 = 1'b1;
+        end
     end
 endmodule
